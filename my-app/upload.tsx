@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TouchableHighlight,
@@ -7,9 +7,29 @@ import {
   Image,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import SQLite from "react-native-sqlite-storage";
 
 const Upload = () => {
   const [image, setImage] = useState(null);
+
+  useEffect(() => {}, []);
+
+  const createTable = () => {
+    const db = SQLite.openDatabase(
+      { name: "PhotosDatabase.db", location: "default" },
+      () => console.log("Database opened successfully"),
+      (error) => console.error("Error opening database", error)
+    );
+
+    db.transaction((tx) => {
+      tx.executeSql(
+        "CREATE TABLE IF NOT EXISTS photos (id INTEGER PRIMARY KEY AUTOINCREMENT, uri TEXT)",
+        [],
+        () => console.log("Table created successfully"),
+        (tx, error) => console.error("Error creating table", error)
+      );
+    });
+  };
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -18,12 +38,30 @@ const Upload = () => {
       quality: 1,
     });
 
-    console.log(0, result);
+    console.log(result);
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
-      // console.log(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      // saveImageToDatabase(uri);
+      setImage(uri);
     }
+  };
+
+  const saveImageToDatabase = (uri) => {
+    const db = SQLite.openDatabase(
+      { name: "PhotosDatabase.db", location: "default" },
+      () => console.log("Database opened successfully"),
+      (error) => console.error("Error opening database", error)
+    );
+
+    db.transaction(
+      (tx) => {
+        tx.executeSql("INSERT INTO photos (uri) VALUES (?)", [uri]);
+      },
+      null,
+      () => console.log("Image saved to database successfully"),
+      (tx, error) => console.error("Error saving image to database", error)
+    );
   };
 
   return (
